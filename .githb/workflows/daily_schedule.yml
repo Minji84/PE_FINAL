@@ -2,8 +2,8 @@ name: Daily Strategy Report
 
 on:
   schedule:
-    # 매일 한국 시간 오전 9시 (UTC 00:00)
-    - cron: '0 0 * * *'
+    # 매일 UTC 05:00 실행 (유럽 CET 기준 오전 6시, 서머타임 시 7시)
+    - cron: '0 5 * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,5 +26,5 @@ jobs:
           SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
-          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          # EMAIL_TO는 스크립트 내부에 하드코딩되었으므로 제거함
         run: node scripts/daily_automation.js
