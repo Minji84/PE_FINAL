@@ -1,27 +1,27 @@
 const https = require('https');
 const fs = require('fs');
 
-// 설정: 검색할 키워드들
+// 설정: 검색할 키워드들 (요청된 5가지)
 const SEARCH_QUERIES = [
-  "ArcelorMittal Europe strategy news",
-  "Green Steel projects in Europe",
-  "EU CBAM regulation steel impact",
-  "POSCO Europe market trends",
-  "European steel price forecast"
+  "Automotive trend",
+  "steel company trend",
+  "electric vehicle",
+  "energy",
+  "AI"
 ];
 
-// 이메일 설정
-const EMAIL_RECIPIENTS = process.env.EMAIL_TO; 
+// 이메일 설정 (지정된 수신자)
+const EMAIL_RECIPIENTS = 'jewoong85@gmail.com'; 
 
 // 1. 검색 함수 (Google Serper API 사용)
 async function search(query) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       q: query,
-      gl: "de", // 독일 기준 검색
-      hl: "en",
+      gl: "de", // 유럽(독일) 기준 검색 결과
+      hl: "en", // 언어는 영어
       num: 10,  // 키워드당 10개
-      tbs: "qdr:d" // 지난 24시간 이내 뉴스만
+      tbs: "qdr:d" // 지난 24시간 이내 뉴스만 (qdr:d = past 24h)
     });
 
     const options = {
@@ -98,20 +98,21 @@ async function sendEmail(excelContent) {
   const dateStr = new Date().toISOString().slice(0,10);
   
   await transporter.sendMail({
-    from: `"POSCO Strategy Bot" <${process.env.EMAIL_USER}>`,
+    from: `"POSCO Market Watch" <${process.env.EMAIL_USER}>`,
     to: EMAIL_RECIPIENTS,
-    subject: `[Daily] POSCO Europe Strategy Report - ${dateStr}`,
-    html: `<h3>일일 전략 리포트 (${dateStr})</h3><p>금일 수집된 유럽 철강 시장 주요 뉴스입니다.</p>`,
-    attachments: [{ filename: `Report_${dateStr}.xls`, content: excelContent }]
+    subject: `[Daily] Market Trend Report (Automotive/Steel/EV/Energy/AI) - ${dateStr}`,
+    html: `<h3>일일 마켓 트렌드 리포트 (${dateStr})</h3>
+           <p>지정된 5대 키워드(Automotive trend, Steel trend, EV, Energy, AI)에 대한 지난 24시간 유럽 관련 뉴스입니다.</p>`,
+    attachments: [{ filename: `Trend_Report_${dateStr}.xls`, content: excelContent }]
   });
-  console.log("Email sent!");
+  console.log(`Email sent to ${EMAIL_RECIPIENTS}`);
 }
 
 // 실행
 async function run() {
   try {
     if (!process.env.SERPER_API_KEY || !process.env.EMAIL_USER) {
-      console.log("필수 설정(Secrets)이 없습니다. GitHub Settings를 확인하세요.");
+      console.log("필수 설정(Secrets: SERPER_API_KEY, EMAIL_USER, EMAIL_PASS)이 없습니다. GitHub Settings를 확인하세요.");
       return;
     }
     
@@ -119,7 +120,9 @@ async function run() {
     for (const query of SEARCH_QUERIES) {
       console.log(`Searching: ${query}`);
       const res = await search(query);
-      allResults = [...allResults, ...res];
+      // 결과에 검색 키워드 태그 추가
+      const taggedRes = res.map(item => ({ ...item, title: `[${query}] ${item.title}` }));
+      allResults = [...allResults, ...taggedRes];
     }
     
     // 중복 제거
@@ -128,7 +131,7 @@ async function run() {
     if (unique.length > 0) {
       await sendEmail(generateExcelContent(unique));
     } else {
-      console.log("새로운 뉴스가 없습니다.");
+      console.log("지난 24시간 동안 새로운 뉴스가 없습니다.");
     }
   } catch (e) {
     console.error("Error:", e);
